@@ -8,11 +8,9 @@ from nltk.classify import svm
 from nltk.corpus import stopwords
 
 nltk.download('stopwords')
-from nltk.stem import PorterStemmer
 import re
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn import svm
-from sklearn.metrics import classification_report
+
+
 
 '''
 tweets_pre = pd.read_csv('./datasets/sentiment140.csv')
@@ -24,25 +22,6 @@ tweets = tweets_pre[keep_col]
 tweets.to_csv('./datasets/sentiment140.csv', index=False)
 
 '''
-
-
-tweets = pd.read_csv('./datasets/sentiment140.csv')
-
-
-
-from sklearn.utils import shuffle
-
-tweets = shuffle(tweets)
-
-
-tweets.drop(tweets.tail(1580000).index, inplace=True)
-
-tweets.to_csv('./datasets/sentiment_dataset.csv', index=False)
-
-''''''
-'''
-x = tweets['text']
-
 
 
 # set up punctuations we want to be replaced
@@ -61,10 +40,3 @@ def clean_tweets(df):
         tempArr.append(tmpL)
     return tempArr
 
-cleaned_tweets = clean_tweets(x)
-
-tweets['cleaned_text'] = cleaned_tweets
-
-tweets.to_csv('./datasets/sentiment_dataset.csv', index=False)
-
-'''

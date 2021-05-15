@@ -54,8 +54,6 @@ print('negative: ', report['0'])
 '''
 
 
-
-
 vectorizer = CountVectorizer()
 
 # tokenize and make the document into a matrix
@@ -64,11 +62,16 @@ X_fin = vectorizer.fit_transform(tweets['cleaned_text'].values.astype('U'))
 
 from sklearn.naive_bayes import MultinomialNB
 
-model = MultinomialNB()
+
 
 from sklearn.model_selection import train_test_split
 
 X_train, X_test, y_train, y_test = train_test_split(X_fin, tweets['target'], test_size=0.3)
+
+
+# USE BINOMIAL????
+
+model = MultinomialNB()
 
 model.fit(X_train, y_train)
 
