@@ -14,17 +14,17 @@ ACC_TOKEN_SECRET = os.getenv('ACC_TOKEN_SECRET')
 # Personal tokens
 from unidecode import unidecode
 
-consumer_key = CONS_KEY
-consumer_secret = CONS_SECRET
-access_token = ACC_TOKEN
-access_token_secret = ACC_TOKEN_SECRET
+consumer_key = 'nKocnaxNQwsFrQHLHjJ08tu7y'
+consumer_secret = '98bqiL8UebuTHMZshLjv2QqrWafU3Hb2JOZ7wbZN4ETSRbzmZg'
+access_token = '1089555060722491393-rOsJn0i0HL9DtC3CoC8c0Ef4Knogtr'
+access_token_secret = 'XHTP4QFdpo7p9fP3EmoJaMn24F677ACbgJ7U2p6WZJPgQ'
 
 auth = OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 api = API(auth)
 
 # Usernames whose tweets we want to gather.
-users = []
+users = ['OG_BDN0tail']
 
 for user in users:
 
