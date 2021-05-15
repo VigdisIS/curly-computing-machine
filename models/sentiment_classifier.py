@@ -239,7 +239,7 @@ import pickle
 # pickling the vectorizer
 pickle.dump(tf_vector, open('sent_vectorizer.sav', 'wb'))
 # pickling the model
-pickle.dump(NB_model, open('sent_classifier.sav', 'wb'))
+pickle.dump(LR_model, open('sent_classifier.sav', 'wb'))
 
 
 

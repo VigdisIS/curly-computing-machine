@@ -1,7 +1,11 @@
 import glob
+from dbm.ndbm import library
 
 import nltk
 import pandas as pd
+import unicodecsv
+from numpy.distutils.command.install import install
+
 
 from models.sentiment_classifier import load_dataset, preprocess_tweet_text
 
@@ -30,7 +34,6 @@ def most_common_words(path):
 
             corpus += ' '.join(dataset.iloc[:, 1])
 
-
         allWords = nltk.tokenize.word_tokenize(corpus)
         allWordDist = nltk.FreqDist(allWords)
 
@@ -41,17 +44,24 @@ def most_common_words(path):
         words = [w for w, _ in mostCommon]
         freq_words.append(words)
 
-    print(spheres)
-    print(freq_words)
+    with open('word_freq_corpus.csv', 'wb') as file:
+        writer = unicodecsv.writer(file, delimiter=',', quotechar='"')
 
+        # Write header row.
+        header = ['sphere', 'text']
 
+        writer.writerow(header)
 
+        print(spheres[0])
+        print(freq_words[0])
 
+        # Get 1000 most recent tweets for the current user.
+        for i in range(len(spheres)):
+            sphere = [spheres[i]]
+            words = [' '.join(freq_words[i])]
 
-
-
+            writer.writerow(sphere + words)
 
 
 most_common_words('../tweets/*')
-
 

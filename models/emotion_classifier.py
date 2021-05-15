@@ -1,18 +1,25 @@
+import pickle
+
 import pandas as pd
 import numpy as np
 import re
 import string
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.model_selection import train_test_split
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 # ML Libraries
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
+
+import matplotlib.pyplot as plt
 
 # Global Parameters
 stop_words = set(stopwords.words('english'))
@@ -20,24 +27,88 @@ stop_words = set(stopwords.words('english'))
 # x = tweets['text']
 
 
+def remove_unwanted_cols(dataset, cols):
+    for col in cols:
+        del dataset[col]
+    return dataset
+
+
+def load_dataset(filename, cols):
+    dataset = pd.read_csv(filename, encoding='latin-1')
+    dataset.columns = cols
+    return dataset
+
+
+# Load dataset
+dataset = load_dataset('../datasets/emotion_dataset.csv', ['Sl no', 'Tweets', 'Search key', 'Feeling', 'cleaned_text'])
+
+# Remove unwanted columns from dataset
+dataset = remove_unwanted_cols(dataset, ['Sl no', 'Search key', 'cleaned_text'])
+
+dataset.groupby('Feeling').count().plot.bar(ylim=0)
+plt.show()
+
+#Preprocess data
+
+stemmer = PorterStemmer()
+
+dataset.Tweets = dataset['Tweets'].apply(lambda x: " ".join([stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in stop_words]).lower())
+
+vectorizer = TfidfVectorizer(min_df= 3, stop_words="english", sublinear_tf=True, norm='l2', ngram_range=(1, 2))
+final_features = vectorizer.fit_transform(dataset.Tweets).toarray()
+print(final_features.shape)
+
+#first we split our dataset into testing and training set:
+# this block is to split the dataset into training and testing set
+X = np.array(dataset.iloc[:, 0]).ravel()
+
+Y = np.array(dataset.iloc[:, 1]).ravel()
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
+
+
+# instead of doing these steps one at a time, we can use a pipeline to complete them all at once
+pipeline = Pipeline([('vect', vectorizer),
+                     ('chi',  SelectKBest(chi2, k=1200)),
+                     ('clf', RandomForestClassifier())])
+
+# fitting our model and save it in a pickle for later use
+model = pipeline.fit(X_train, y_train)
+with open('RandomForest.pickle', 'wb') as f:
+    pickle.dump(model, f)
+
+ytest = np.array(y_test)
+
+# confusion matrix and classification report(precision, recall, F1-score)
+print(classification_report(ytest, model.predict(X_test)))
+print(confusion_matrix(ytest, model.predict(X_test)))
+
+
+'''
 def preprocess_tweet_text(tweet):
-    tweet.lower()
+    tweet = tweet.lower()
+
     # Remove urls
     tweet = re.sub(r"http\S+|www\S+|https\S+", '', tweet, flags=re.MULTILINE)
     # Remove user @ references and '#' from tweet
     tweet = re.sub(r'\@\w+|\#', '', tweet)
     # Remove punctuations
     tweet = tweet.translate(str.maketrans('', '', string.punctuation))
+
+    # Remove twitter words
+    stop_words.add('rt')
+    stop_words.add('im')
+    stop_words.add('u')
+
     # Remove stopwords
     tweet_tokens = word_tokenize(tweet)
     filtered_words = [w for w in tweet_tokens if not w in stop_words]
 
-    # ps = PorterStemmer()
-    # stemmed_words = [ps.stem(w) for w in filtered_words]
-    # lemmatizer = WordNetLemmatizer()
-    # lemma_words = [lemmatizer.lemmatize(w, pos='a') for w in stemmed_words]
+    ps = PorterStemmer()
+    stemmed_words = [ps.stem(w) for w in filtered_words]
+    #lemmatizer = WordNetLemmatizer()
+    #lemma_words = [lemmatizer.lemmatize(w, pos='a') for w in filtered_words]
 
-    return " ".join(filtered_words)
+    return " ".join(stemmed_words)
 
 
 def load_dataset(filename, cols):
@@ -51,27 +122,19 @@ def get_feature_vector(train_fit):
     vector.fit(train_fit)
     return vector
 
-tweets = pd.read_csv('../datasets/emotion_dataset.csv')
+# Load dataset
+dataset = load_dataset('../datasets/emotion_dataset.csv', ['Sl no', 'Tweets', 'Search key', 'Feeling', 'cleaned_text'])
+#Preprocess data
 
-x = tweets['Tweets']
-
-
-def clean_tweets(df):
-    tempArr = []
-    for tweet in df:
-        processed = preprocess_tweet_text(tweet)
-        tempArr.append(processed)
-    return tempArr
-
-preprocessed_text = clean_tweets(x)
+dataset.Tweets = dataset['Tweets'].apply(preprocess_tweet_text)
 
 
 # Split dataset into Train, Test
 
 # Same tf vector will be used for Testing sentiments on unseen trending data
-tf_vector = get_feature_vector(np.array(preprocessed_text).ravel())
-X = tf_vector.transform(np.array(preprocessed_text).ravel())
-y = np.array(tweets['Feeling']).ravel()
+tf_vector = get_feature_vector(np.array(dataset.iloc[:, 1]).ravel())
+X = tf_vector.transform(np.array(dataset.iloc[:, 1]).ravel())
+y = np.array(dataset.iloc[:, 3]).ravel()
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=30)
 
@@ -87,152 +150,18 @@ LR_model.fit(X_train, y_train)
 y_predict_lr = LR_model.predict(X_test)
 print(accuracy_score(y_test, y_predict_lr))
 
+
+
 import pickle
 # pickling the vectorizer
 pickle.dump(tf_vector, open('emot_vectorizer.sav', 'wb'))
 # pickling the model
-pickle.dump(NB_model, open('emot_classifier.sav', 'wb'))
+pickle.dump(LR_model, open('emot_classifier.sav', 'wb'))
 
 
 
 
-''' 
-import numpy as np
-from scipy.sparse import hstack
-from sklearn.feature_extraction.text import CountVectorizer
-
-count_vectorizer = CountVectorizer(ngram_range=(1, 2))
-
-vectorized_data = count_vectorizer.fit_transform(tweets['cleaned_text'].values.astype('U'))
-#indexed_data = hstack((np.array(range(0, vectorized_data.shape[0]))[:, None], vectorized_data))
-
-def sentiment2target(sentiment):
-    return {
-        'happy': 0,
-        'sad': 1,
-        'surprise': 2,
-        'fear': 3,
-        'disgust': 4,
-        'angry': 5
-    }[sentiment]
-
-
-targets = tweets['Feeling'].apply(sentiment2target)
-
-from sklearn.model_selection import train_test_split
-
-X_train, X_test, y_train, y_test = train_test_split(vectorized_data, targets, test_size=0.3, random_state=0)
-
-from sklearn import svm
-
-clf = svm.SVC(kernel='linear') # Linear Kernel
-
-#Train the model using the training sets
-clf.fit(X_train, y_train)
-
-#Predict the response for test dataset
-y_pred = clf.predict(X_test)
-
-from sklearn import metrics
-
-# Model Accuracy: how often is the classifier correct?
-print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+print(classification_report(y_test, LR_model.predict(X_test)))
+print(confusion_matrix(y_test, LR_model.predict(X_test)))
 '''
-
-
-'''
-cleaned_tweets = clean_tweets(x)
-
-tweets['cleaned_text'] = cleaned_tweets
-
-tweets.to_csv('./datasets/emotion_dataset.csv', index=False)
-'''
-
-
-'''
-
-
-
-tf=TfidfVectorizer()
-text_tf= tf.fit_transform(tweets['cleaned_text'])
-
-from sklearn.model_selection import train_test_split
-
-# X -> features, y -> label
-X = text_tf
-y = tweets['Feeling']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
-
-
-
-dt = DecisionTreeClassifier()
-dt.fit(X_train,y_train)
-
-preddt = dt.predict(X_test)
-print("Confusion Matrix for Decision Tree:")
-print(confusion_matrix(y_test,preddt))
-
-score = round(accuracy_score(y_test,preddt)*100,2)
-print("Score:",score)
-
-print("Classification Report:")
-print(classification_report(y_test,preddt))
-
-
-
-import pickle
-# pickling the vectorizer
-pickle.dump(tf, open('emot_vectorizer.sav', 'wb'))
-# pickling the model
-pickle.dump(dt, open('emot_classifier.sav', 'wb'))
-
-'''
-
-
-'''
-from sklearn import datasets
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
-
-# loading the iris dataset
-#iris = datasets.load_iris()
-
-# X -> features, y -> label
-X = tweets['cleaned_text']
-y = tweets['Feeling']
-
-vectorizer = CountVectorizer()
-
-# tokenize and make the document into a matrix
-X_fin = vectorizer.fit_transform(X.values.astype('U'))
-
-# dividing X, y into train and test data
-X_train, X_test, y_train, y_test = train_test_split(X_fin, y, test_size=0.4)
-
-
-model = MultinomialNB()
-
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-from sklearn.metrics import classification_report
-
-cf = classification_report(y_test, y_pred)
-print(cf)
-'''
-
-'''
-# training a DescisionTreeClassifier
-from sklearn.tree import DecisionTreeClassifier
-
-dtree_model = DecisionTreeClassifier(max_depth=2).fit(X_train, y_train)
-dtree_predictions = dtree_model.predict(X_test)
-
-# creating a confusion matrix
-cm = confusion_matrix(y_test, dtree_predictions)
-
-from sklearn import metrics #Import scikit-learn metrics module for accuracy calculation
-
-print("Accuracy:",metrics.accuracy_score(y_test, dtree_predictions))
-'''
+''''''
