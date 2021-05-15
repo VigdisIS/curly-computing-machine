@@ -1,10 +1,18 @@
 import glob
-from dbm.ndbm import library
 
 import nltk
 import pandas as pd
 import unicodecsv
+from mercurial.statprof import display
+
+nltk.download('wordnet')
 from numpy.distutils.command.install import install
+
+from textnets import Corpus, Textnet
+
+from textnets import examples
+
+
 
 
 from models.sentiment_classifier import load_dataset, preprocess_tweet_text
@@ -18,7 +26,7 @@ def most_common_words(path):
 
     for tweetset in glob.glob(path):
 
-        sphere = tweetset.split('\\')[1]
+        sphere = tweetset.split('/')[2]
 
         corpus = ""
 
@@ -63,5 +71,18 @@ def most_common_words(path):
             writer.writerow(sphere + words)
 
 
-most_common_words('../tweets/*')
+#most_common_words('../tweets/*')
 
+
+
+freq_corpus = Corpus.from_csv('word_freq_corpus.csv', label_col='sphere', doc_col='text')
+
+tn = Textnet(freq_corpus.tokenized(), min_docs=1)
+
+tn.plot(label_term_nodes=True,
+        label_doc_nodes=True,
+        show_clusters=True)
+
+spheres = tn.project(node_type='doc')
+
+spheres.plot(label_nodes=True)
