@@ -1,16 +1,15 @@
 import glob
 
 import nltk
-import pandas as pd
 import unicodecsv
-from mercurial.statprof import display
+
 
 nltk.download('wordnet')
 from numpy.distutils.command.install import install
 
-from textnets import Corpus, Textnet
 
-from textnets import examples
+
+from textnets import Corpus, Textnet
 
 
 

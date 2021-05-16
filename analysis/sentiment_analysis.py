@@ -1,13 +1,13 @@
 import glob
 import pickle
-
-import pandas as pd
 import numpy as np
-
 import matplotlib.pyplot as plt
+from nltk import PorterStemmer, re
+from nltk.corpus import stopwords
 
-
-from models.sentiment_classifier import clean_tweets
+from models.sentiment_classifier import load_dataset
+stemmer = PorterStemmer()
+stop_words = set(stopwords.words('english'))
 
 # load the model from disk
 tf_vector = pickle.load(open('../models/sent_vectorizer.sav', 'rb'))
@@ -43,13 +43,15 @@ def plot_sphere_sents(path):
         for fname in glob.glob(path):
             print(fname)
 
-            tweets = pd.read_csv(fname)
+            # Load dataset
+            dataset = load_dataset(fname, ['username', 'text', 'cleaned_text'])
 
-            tweet_text = tweets['text']
+            dataset.text = dataset['text'].apply(lambda x: " ".join(
+                [stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in stop_words]).lower())
 
-            preprocessed_text = clean_tweets(tweet_text)
+            test = np.array(dataset.iloc[:, 1]).ravel()
 
-            test_feature = tf_vector.transform(np.array(preprocessed_text).ravel())
+            test_feature = tf_vector.transform(np.array(test).ravel())
 
             # Using Logistic Regression model for prediction
             test_prediction_lr = LR_model.predict(test_feature)
@@ -61,7 +63,7 @@ def plot_sphere_sents(path):
             pos_tweets_.append(occurrences)
             neg_tweets_.append(occurrencesv2)
 
-            accounts.append(tweets['username'][1])
+            accounts.append(dataset.iloc[:, 0][1])
 
             pos_count += occurrences
             neg_count += occurrencesv2
